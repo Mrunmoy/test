@@ -5,4 +5,4 @@ interview test
 cp word.txt bin/.
 
 
-bin/.Test bin/words.txt abanzqzdrrorrnrr 
+bin/.Test bin/word.txt abanzqzdrrorrnrr 
