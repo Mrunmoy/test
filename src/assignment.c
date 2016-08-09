@@ -138,7 +138,6 @@ int key_indices[GRID_SIZE][MAX_LIST] =
 };
 
 static Cell_t grid[16];
-static WordListIterator_t GridWords;
 char gridletters[GRID_SIZE] = { 0 };
 
 /*
@@ -160,12 +159,8 @@ char gridletters[GRID_SIZE] = { 0 };
 */
 
 static void InitializeGrid(char *grid_chars);
-static void FormWordsFromGrid(void);
+int CheckWordMatch(Cell_t * pGrid, int *visited, char * search_word, int remaining);
 
-void AddNewWord(char *new_word);
-void findNextAdjCell(Cell_t * pGrid, int *visited, char * new_word, char *cont_str);
-
-int cmpstr(const void* a, const void* b);
 
 /*
 *----------------------------------------------------------------------
@@ -175,47 +170,20 @@ int cmpstr(const void* a, const void* b);
 int main(int argc, char *argv[])
 {
 	FILE * 	inputFP; 		/*!< Input File Pointer */
-	FILE * 	outputFP; 		/*!< Input File Pointer */
-	char 	buf[BUF_SIZE];	/*!< buffer to hold data to read/write */
-	int 	iter = 0;
-	size_t strings_len;
-	char *lookup;
-	int lookup_i;
-	char **ArrayOfWords = NULL; 		/* String List */
+	char file_word[BUF_SIZE];
+	int iter;
+	/* char *str = "abanzqzdrrorrnrr"; */
 
 #if 1
-	char file_word[MAX_WORD_SIZE+2];
-	char **ArrayOfWordsFromFile = NULL; /* String List */
-	int noOfLines = 0;
-
-
-	int found = 0;
-	int count = 0;
-#endif
-	Wordlist_t *prev_word, *cur_word = &GridWords.word_list;
-
-	if (argc != 4 || strcmp(argv[1], "--help") == 0)
+	if (argc != 3 || strcmp(argv[1], "--help") == 0)
 	{
-		printf("%s /usr/share/dict/words /home/amedev/test/temp abanzqzdrrorrnrr\n", argv[0]);
+		printf("%s /usr/share/dict/words abanzqzdrrorrnrr\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
+#endif
+	/* InitializeGrid(str); */
+	InitializeGrid(argv[2]);
 
-	InitializeGrid(argv[3]);
-
-	FormWordsFromGrid();
-
-	ArrayOfWords = (char**)malloc(GridWords.count * sizeof(char*));
-	/*printf("finished malloc of string pointers\n");*/
-	cur_word = &GridWords.word_list;
-	while (cur_word)
-	{
-		ArrayOfWords[iter] = cur_word->search_word;
-		/* printf("[%d] = %s\n",iter, ArrayOfWords[iter]);*/
-		cur_word = cur_word->next;
-		iter++;
-	}
-	strings_len = sizeof(ArrayOfWords) / sizeof(char *);
-	qsort(ArrayOfWords, strings_len, sizeof(char *), cmpstr);
 
 	/* Open input and output files */
 	if ((inputFP = fopen(argv[1], "r")) == NULL)
@@ -224,96 +192,57 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	if ((outputFP = fopen(argv[2], "w+")) == NULL)
-	{
-		printf("ERR: open %s file.\n", argv[2]);
-		exit(1);
-	}
-
-	GridWords.outputFP = outputFP;
-
-	/* Read and store in a string list.*/
-	while(fgets(file_word, MAX_WORD_SIZE+2, inputFP) != NULL)
-	{
-		/* Remove the trailing newline character */
-		if(strchr(file_word,'\n'))
-			file_word[strlen(file_word)-1] = '\0';
-		ArrayOfWordsFromFile = (char**)realloc(ArrayOfWordsFromFile, sizeof(char**)*(noOfLines+1));
-		ArrayOfWordsFromFile[noOfLines] = (char*)calloc(MAX_WORD_SIZE,sizeof(char));
-		strcpy(ArrayOfWordsFromFile[noOfLines], file_word);
-		noOfLines++;
-	}
-	strings_len = sizeof(ArrayOfWordsFromFile) / sizeof(char *);
-	qsort(ArrayOfWordsFromFile, strings_len, sizeof(char *), cmpstr);
-
 	iter = 0;
-	/* until we encounter end of input or an error */
-	while (iter<noOfLines)
+	/* Read and store in a string list.*/
+	while(fgets(file_word, BUF_SIZE, inputFP) != NULL)
 	{
+		int i;
 		int checker = 0;
 		int is_punct = 0;
+		int visited[GRID_SIZE] = {0};
+		/* Remove the trailing newline character */
 
-		/* printf("searching for %s\n...", ArrayOfWordsFromFile[iter]);*/
-		while (ArrayOfWordsFromFile[iter][checker])
+		/*if(strcmp(file_word, ""))
+			printf("%s\n", file_word);*/
+		while (file_word[checker])
 		{
-			ArrayOfWordsFromFile[iter][checker] = tolower(ArrayOfWordsFromFile[iter][checker]);
-			if (ispunct(ArrayOfWordsFromFile[iter][checker]))
+			file_word[checker] = tolower(file_word[checker]);
+			if (ispunct(file_word[checker]))
 			{
 				is_punct = 1;
 				break;
 			}
+			else if(file_word[checker] == '\n')
+			{
+				file_word[checker] = '\0';
+			}
 			checker++;
 		}
 
-		if(is_punct || (strlen(ArrayOfWordsFromFile[iter]) > 16) || (strlen(ArrayOfWordsFromFile[iter]) == 0))
+		if(is_punct || (strlen(file_word) > GRID_SIZE) || (strlen(file_word) == 0))
 		{
 			iter++;
 			continue;
 		}
 
-		/* core search goes here */
-		lookup_i = 0;
-		while (lookup_i < GridWords.count)
+		for(i=0;i<GRID_SIZE;i++)
 		{
-			lookup = ArrayOfWords[lookup_i];
-			/* word match : sorted arrays
-			 * if the first character is <= the search string first char
-			 * process else continue with looping
-			 * if the string len matches, then process else continue looping
-			 * */
-			if(ArrayOfWordsFromFile[iter][0] <= lookup[0])
-			if( strlen(ArrayOfWordsFromFile[iter]) == strlen(lookup) )
+			if(file_word[0] == grid[i].value)
 			{
-				if (strcmp(lookup, ArrayOfWordsFromFile[iter]) == 0)
+				if(strlen(file_word) == 1)
 				{
-					/* list the found word */
-					printf("%s\n", lookup);
-
-					/* clear the array */
-					ArrayOfWords[lookup_i][0] = '\0';
+					printf("%s\n", file_word);
+					break;
+				}
+				if(CheckWordMatch(&grid[i], visited, file_word, strlen(file_word)))
+				{
+					printf("%s\n", file_word);
 					break;
 				}
 			}
-			lookup_i++;
 		}
 		iter++;
 	}
-	/* free memory */
-	cur_word = &GridWords.word_list;
-	while(cur_word)
-	{
-		Wordlist_t *temp;
-		temp = cur_word;
-		cur_word = cur_word->next;
-		free(temp);
-	}
-	iter = 0;
-	while(iter<noOfLines)
-	{
-		free(ArrayOfWordsFromFile[iter]);
-		iter++;
-	}
-	free(ArrayOfWordsFromFile);
 
 	printf("finished searching...\n");
 
@@ -352,85 +281,45 @@ static void InitializeGrid(char *grid_chars)
 			}
 		}
 	}
-	memset(&GridWords, 0, sizeof(GridWords));
-	GridWords.curr = &GridWords.word_list;
-	GridWords.word_list.next = NULL;
 }
 
-/* Form all possible word combinations in
-* the grid and store in GridWords
-* depth first traversal
-* */
-static void FormWordsFromGrid(void)
+int CheckWordMatch(Cell_t * pGrid, int *visited, char * search_word, int remaining)
 {
-	int i;
-
-	/* for each cell in the grid */
-	for (i = 0; i < GRID_SIZE; i++)
-	{
-		char new_word[MAX_WORD_SIZE + 1];
-		int visited[GRID_SIZE] = { 0 };
-		Cell_t *cur_cell = &grid[i];
-
-		/* for each adjacent cell of the current cell
-		 find out all the possible words that
-		 can be formed
-		 set all characters to -1, so that
-		 we can start filling in new characters
-		 along a path */
-		findNextAdjCell(cur_cell, visited, new_word, new_word);
-	}
-}
-
-void findNextAdjCell(Cell_t * pGrid, int *visited, char * new_word, char *cont_str)
-{
+	int result = 0;
+	/* printf("to match %s [%d]\n", search_word, remaining);*/
 	if (pGrid)
 	{
 		int i;
-		visited[pGrid->cell_no] = 1;
-		*cont_str = pGrid->value;
-		cont_str++;
-		*cont_str = '\0';
-
-		/* Add a new word because a new letter just got added
-		 to the current word */
-		AddNewWord(new_word);
-
-		/* iterate over all the adjacent cells
-		* connected to the curent cell */
-		for (i = 0; i<pGrid->num_adj_cells; i++)
+		if( *search_word == pGrid->value)
 		{
-			if (!visited[pGrid->adjacent[i]->cell_no])
+			remaining--;
+			visited[pGrid->cell_no] = 1;
+
+			if(remaining > 0)
 			{
-				findNextAdjCell(pGrid->adjacent[i], visited, new_word, cont_str);
+				/* keep searching until a match is
+				 * found or we are out of options */
+				/* iterate over all the adjacent cells
+				 * connected to the current cell */
+				for (i = 0; i<pGrid->num_adj_cells; i++)
+				{
+					if (!visited[pGrid->adjacent[i]->cell_no])
+					{
+						result = CheckWordMatch(pGrid->adjacent[i], visited, search_word+1, remaining);
+						if(result)
+							break;
+					}
+				}
 			}
+			else
+			{
+				result = 1;
+			}
+			visited[pGrid->cell_no] = 0;
 		}
-		visited[pGrid->cell_no] = 0;
 	}
-	*cont_str = '\0';
+	return result;
 }
-
-void AddNewWord(char *new_word)
-{
-	Wordlist_t *temp = (Wordlist_t *)malloc(sizeof (Wordlist_t));
-	if(temp)
-	{
-		strcpy(temp->search_word, new_word);
-		temp->word_len = strlen(new_word);
-		GridWords.curr->next = temp;
-		temp->next = NULL;
-		GridWords.curr = temp;
-		GridWords.count++;
-	}
-}
-
-int cmpstr(const void* a, const void* b)
-{
-    const char* aa = (const char*)a;
-    const char* bb = (const char*)b;
-    return strcmp(aa, bb);
-}
-
 
 /*
 *----------------------------------------------------------------------
