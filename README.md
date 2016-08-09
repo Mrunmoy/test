@@ -2,7 +2,6 @@
 interview test
 
 
-cp words.txt bin/.
+make
 
-
-bin/.Test bin/words.txt abanzqzdrrorrnrr 
+bin/.Assignment words.txt abanzqzdrrorrnrr 
