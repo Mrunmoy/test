@@ -2,7 +2,7 @@
 interview test
 
 
-cp word.txt bin/.
+cp words.txt bin/.
 
 
-bin/.Test bin/word.txt abanzqzdrrorrnrr 
+bin/.Test bin/words.txt abanzqzdrrorrnrr 
