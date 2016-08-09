@@ -244,7 +244,7 @@ int main(int argc, char *argv[])
 		iter++;
 	}
 
-	printf("finished searching...\n");
+	/*printf("finished searching...\n");*/
 
 	/* Close the Input and Output files */
 	if (fclose(inputFP) == -1)
