@@ -4,4 +4,4 @@ interview test
 
 make
 
-bin/.Assignment words.txt abanzqzdrrorrnrr 
+bin/.Assignment wlist.txt pbanzqrdrkhrrnwr 
