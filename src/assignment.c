@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
 #if 1
 	if (argc != 3 || strcmp(argv[1], "--help") == 0)
 	{
-		printf("%s /usr/share/dict/words abanzqzdrrorrnrr\n", argv[0]);
+		printf("%s /usr/share/dict/words pbanzqrdrkhrrnwr\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
 #endif
